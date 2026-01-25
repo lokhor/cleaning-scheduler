@@ -17,8 +17,8 @@ jobs:
       
       - name: Install Dependencies
         run: |
-          py -m pip install --upgrade pip
-          py -m pip install pandas gkeepapi
+          & "C:\Users\Nick\AppData\Local\Programs\Python\Python314\python.exe" -m pip install --upgrade pip
+          & "C:\Users\Nick\AppData\Local\Programs\Python\Python314\python.exe" -m pip install pandas gkeepapi
 
       - name: Run Script
         env:
