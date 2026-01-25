@@ -1,0 +1,38 @@
+name: Cleaning Schedule Automation
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Runs every night at midnight UTC
+  workflow_dispatch:   # Allows manual trigger
+
+jobs:
+  run-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install Dependencies
+        run: pip install pandas gkeepapi
+
+      - name: Run Script
+        env:
+          GOOGLE_USERNAME: ${{ secrets.GOOGLE_USERNAME }}
+          GOOGLE_PASSWORD: ${{ secrets.GOOGLE_PASSWORD }}
+          # Map person names to Note Titles
+          NOTE_NICK: "Nick's Cleaning Tasks"
+          NOTE_LAURELLE: "Laurelle's Cleaning Tasks"
+        run: python cleaning_script.py
+
+      - name: Commit Updated CSV
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add "cleaning schedule.csv"
+          git commit -m "Update cleaning schedule [skip ci]" || echo "No changes to commit"
+          git push
