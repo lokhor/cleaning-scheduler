@@ -66,7 +66,6 @@ def main():
         with open(CSV_FILE, 'r') as f:
             top_lines = [next(f) for _ in range(2)]
         
-        # Explicitly set dtypes to avoid numeric errors with names
         df = pd.read_csv(CSV_FILE, skiprows=2, dtype={
             'Currently Assigned To': str,
             'Last Assigned Date': str
@@ -74,12 +73,10 @@ def main():
     except Exception as e:
         print(f"Error reading CSV: {e}"); return
 
-    # Re-assigning logic
     if is_monday:
         df = assign_logic(df, today)
 
     tasks_to_push = []
-    # Use the CSV's original order for the push list
     for idx, row in df.iterrows():
         person = row['Currently Assigned To']
         if pd.isna(person) or person == 'nan': continue
@@ -90,18 +87,16 @@ def main():
                 'person': person, 
                 'area': row['Area'], 
                 'task': row['Activity'],
-                'original_index': idx # Track original CSV order
+                'original_index': idx
             })
             df.at[idx, 'Last Assigned Date'] = today.isoformat()
 
-    # Save updated CSV state
     df.to_csv('temp.csv', index=False)
     with open(CSV_FILE, 'w', newline='') as f:
         f.writelines(top_lines)
         with open('temp.csv', 'r') as t: f.write(t.read())
     os.remove('temp.csv')
 
-    # Keep Authentication
     username = os.getenv('GOOGLE_USERNAME')
     password = os.getenv('GOOGLE_PASSWORD') 
     keep = gkeepapi.Keep()
@@ -110,7 +105,6 @@ def main():
     except:
         keep.authenticate(username, password)
 
-    # Group tasks by person
     tasks_to_push.sort(key=lambda x: x['person'])
     for person, tasks in groupby(tasks_to_push, key=lambda x: x['person']):
         env_key = f"NOTE_{person.upper().replace(' ', '_')}"
@@ -120,16 +114,19 @@ def main():
         notes = list(keep.find(query=note_title))
         note = notes[0] if notes else keep.createList(note_title, [])
         
-        # Archive completed items and clear current items to reset order
+        # 1. ARCHIVE: Move checked items to archive, then remove from active view
         for item in note.items:
             if item.checked:
                 item.archived = True
-            item.delete()
         
-        # Sort based on the original order in the CSV
+        # 2. SYNC: Map existing items by text to avoid redundant deletes
+        existing_items = {item.text: item for item in note.items if not item.archived}
         p_tasks = sorted(list(tasks), key=lambda x: x['original_index'])
         
-        # Add to Keep in order
+        # 3. REBUILD: Clear and re-add in order (using a stable list)
+        for item in list(note.items):
+            item.delete()
+
         for area, subtasks in groupby(p_tasks, key=lambda x: x['area']):
             header = note.add(f"--- {area} ---", False)
             for st in subtasks:
