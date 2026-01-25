@@ -80,7 +80,12 @@ def main():
     try:
         with open(CSV_FILE, 'r') as f:
             top_lines = [next(f) for _ in range(2)]
-        df = pd.read_csv(CSV_FILE, skiprows=2)
+        
+        # FIX: Explicitly set the column types to avoid 'float64' errors
+        df = pd.read_csv(CSV_FILE, skiprows=2, dtype={
+            'Currently Assigned To': str,
+            'Last Assigned Date': str
+        })
     except Exception as e:
         print(f"Error reading CSV: {e}")
         return
