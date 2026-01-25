@@ -2,14 +2,15 @@ import pandas as pd
 import datetime
 import gkeepapi
 import os
+import sys
 from itertools import groupby
 
 # Configuration
 CSV_FILE = 'cleaning schedule.csv'
-START_OF_WEEK_DAY = 0  # Monday (0) is the start of the week for assignment
+START_OF_WEEK_DAY = 0  # 0 = Monday
 
 def get_date_from_str(date_str):
-    if pd.isna(date_str) or date_str == '' or date_str == 'nan':
+    if pd.isna(date_str) or date_str == '' or str(date_str).lower() == 'nan':
         return None
     try:
         return pd.to_datetime(date_str).date()
@@ -17,163 +18,156 @@ def get_date_from_str(date_str):
         return None
 
 def is_due(row, today):
-    """Checks if a task is due for assignment based on frequency."""
-    last_date = get_date_from_str(row['Last Assigned Date'])
-    if last_date is None:
+    last_assigned = get_date_from_str(row['Last Assigned Date'])
+    if last_assigned is None:
         return True
     
     freq = str(row['frequency']).lower().strip()
-    days_since = (today - last_date).days
+    days_since = (today - last_assigned).days
     
-    if freq == 'daily':
-        return True
-    if freq == 'weekly':
-        return days_since >= 7
-    if freq == 'fortnightly':
-        return days_since >= 14
-    if freq == 'monthly':
-        # Roughly a calendar month
-        return days_since >= 28 and (today.month != last_date.month or today.year != last_date.year)
+    if freq == 'daily': return True
+    if freq == 'weekly': return days_since >= 7
+    if freq == 'fortnightly': return days_since >= 14
+    if freq == 'monthly': return days_since >= 28
     return False
 
 def assign_logic(df, today):
     """
-    Greedy load balancing:
-    1. Calculates weekly weight per Area (Daily effort * 7, others * 1).
-    2. Assigns the entire Area to the eligible person with the least current load.
+    Assigns entire areas to people for the week to balance load based on effort minutes.
     """
-    areas = df['Area'].unique()
+    # Identify all unique people from the CSV
     all_people = set()
     for val in df['Who can do this'].dropna():
         for p in val.split(','):
             all_people.add(p.strip())
     people = sorted(list(all_people))
     
+    areas = df['Area'].unique()
     area_weights = {}
-    area_eligibility = {}
-    
+    area_to_eligible = {}
+
     for area in areas:
         area_df = df[df['Area'] == area]
         weight = 0
         eligible = set(people)
-        
         for _, row in area_df.iterrows():
-            effort = row['Effort to complete in minutes']
-            freq = str(row['frequency']).lower().strip()
+            # Eligible people must be listed in 'Who can do this' for ALL tasks in an area
+            row_people = [p.strip() for p in str(row['Who can do this']).split(',')]
+            eligible &= set(row_people)
             
-            # Identify who is eligible for this area (must be able to do ALL tasks in area)
-            row_people = set([p.strip() for p in str(row['Who can do this']).split(',')])
-            eligible &= row_people
-            
-            if freq == 'daily':
-                weight += effort * 7
-            elif is_due(row, today):
-                weight += effort
+            # Daily tasks are weighted by 7 to reflect weekly effort
+            mins = row['Effort to complete in minutes']
+            weight += (mins * 7) if str(row['frequency']).lower() == 'daily' else mins
         
         area_weights[area] = weight
-        area_eligibility[area] = list(eligible) if eligible else people
+        area_to_eligible[area] = list(eligible) if eligible else people
 
-    # Balance load
-    assignments = {p: 0 for p in people}
-    area_to_person = {}
-    sorted_areas = sorted(areas, key=lambda x: area_weights[x], reverse=True)
+    # Greedy assignment to balance load
+    person_load = {p: 0 for p in people}
+    for area in sorted(areas, key=lambda x: area_weights[x], reverse=True):
+        # Assign to the eligible person with the current lowest load
+        best_p = min(area_to_eligible[area], key=lambda p: person_load[p])
+        df.loc[df['Area'] == area, 'Currently Assigned To'] = best_p
+        person_load[best_p] += area_weights[area]
     
-    for area in sorted_areas:
-        valid_people = area_eligibility[area]
-        best_person = min(valid_people, key=lambda p: assignments[best_person])
-        area_to_person[area] = best_person
-        assignments[best_person] += area_weights[area]
-        
-    for area, person in area_to_person.items():
-        df.loc[df['Area'] == area, 'Currently Assigned To'] = person
-        
     return df
 
 def main():
     today = datetime.date.today()
     is_monday = (today.weekday() == START_OF_WEEK_DAY)
     
-    # Load CSV preserving original headers (skipping first 2 decorative rows)
+    # Load CSV (skipping first two header lines)
     try:
         with open(CSV_FILE, 'r') as f:
-            header_lines = [next(f) for _ in range(2)]
+            top_lines = [next(f) for _ in range(2)]
         df = pd.read_csv(CSV_FILE, skiprows=2)
     except Exception as e:
-        print(f"Error loading CSV: {e}")
+        print(f"Error reading CSV: {e}")
         return
 
-    # 1. Weekly Assignment (only on Mondays)
+    # 1. Weekly Load Balancing (only on Mondays)
     if is_monday:
-        print("Performing weekly area assignments...")
+        print("Monday: Re-assigning weekly tasks...")
         df = assign_logic(df, today)
-    
-    # 2. Determine daily tasks to push to Keep
+
+    # 2. Determine which tasks to push today
     tasks_to_push = []
     for idx, row in df.iterrows():
         person = row['Currently Assigned To']
         if pd.isna(person): continue
-            
+        
         freq = str(row['frequency']).lower().strip()
-        # Daily tasks are added every day. 
-        # Weekly/Fortnightly/Monthly only on Monday if they are due.
+        # Daily tasks push every day; others push on Monday if due
         if freq == 'daily' or (is_monday and is_due(row, today)):
             tasks_to_push.append({
-                'person': person,
-                'area': row['Area'],
-                'activity': row['Activity'],
-                'index': idx
+                'person': person, 
+                'area': row['Area'], 
+                'task': row['Activity']
             })
             df.at[idx, 'Last Assigned Date'] = today.isoformat()
 
-    # Save CSV back to maintain state
+    # Save updated CSV state
     df.to_csv('temp.csv', index=False)
-    with open(CSV_FILE, 'w') as f:
-        f.writelines(header_lines)
-        with open('temp.csv', 'r') as temp:
-            f.write(temp.read())
+    with open(CSV_FILE, 'w', newline='') as f:
+        f.writelines(top_lines)
+        with open('temp.csv', 'r') as t:
+            f.write(t.read())
+    os.remove('temp.csv')
 
-    # 3. Google Keep Sync
+    # 3. Authenticate and Sync to Google Keep
     username = os.getenv('GOOGLE_USERNAME')
-    password = os.getenv('GOOGLE_PASSWORD') # Master Token or App Password
-    if not username or not password:
-        print("Google credentials missing. Set GOOGLE_USERNAME and GOOGLE_PASSWORD.")
-        return
-
+    password = os.getenv('GOOGLE_PASSWORD') # Should be your Master Token (aas_et/...)
+    
     keep = gkeepapi.Keep()
-    if not keep.login(username, password):
-        print("Keep login failed.")
+    try:
+        # Use resume with your Master Token
+        if password.startswith('aas_et') or password.startswith('oauth2rt'):
+            keep.resume(username, password)
+        else:
+            # Fallback for App Password (may fail on first run due to security blocks)
+            keep.authenticate(username, password)
+    except Exception as e:
+        print(f"Authentication failed: {e}")
         return
 
-    # Map people names to Keep Note Titles from env vars
-    # E.g. NOTE_NICK="Nick's To-Do"
-    for person in df['Currently Assigned To'].dropna().unique():
+    # Group tasks by person for their respective notes
+    tasks_to_push.sort(key=lambda x: x['person'])
+    for person, tasks in groupby(tasks_to_push, key=lambda x: x['person']):
+        # Map person name to Environment Variable for Note Title
+        # e.g., 'Nick' looks for 'NOTE_NICK'
         env_key = f"NOTE_{person.upper().replace(' ', '_')}"
-        note_name = os.getenv(env_key)
-        if not note_name: continue
-
-        notes = list(keep.find(query=note_name))
-        note = notes[0] if notes else keep.createList(note_name, [])
-        if not isinstance(note, gkeepapi.node.List): continue
-
-        person_tasks = sorted([t for t in tasks_to_push if t['person'] == person], key=lambda x: x['area'])
+        note_title = os.getenv(env_key)
+        if not note_title:
+            print(f"No note title configured for {person} (check {env_key})")
+            continue
         
-        for area, tasks in groupby(person_tasks, key=lambda x: x['area']):
-            area_header = f"[{area}]"
-            # Find or create area header
-            header_item = next((i for i in note.items if i.text == area_header), None)
-            if not header_item:
-                header_item = note.add(area_header, False)
+        # Find or create the list note
+        notes = list(keep.find(query=note_title))
+        note = notes[0] if notes else keep.createList(note_title, [])
+        
+        # Process tasks for this person
+        person_tasks = list(tasks)
+        person_tasks.sort(key=lambda x: x['area'])
+        
+        for area, subtasks in groupby(person_tasks, key=lambda x: x['area']):
+            header_text = f"--- {area} ---"
             
-            for t in tasks:
-                # Remove existing tasks of the same name to "re-add" them (refresh daily)
-                for item in [i for i in note.items if i.text == t['activity']]:
+            # Ensure area header exists in the list
+            header = next((i for i in note.items if i.text == header_text), None)
+            if not header:
+                header = note.add(header_text, False)
+            
+            for st in subtasks:
+                # Remove existing instances of the task to avoid duplicates on daily refresh
+                for item in [i for i in note.items if i.text == st['task']]:
                     item.delete()
                 
-                new_item = note.add(t['activity'], False)
-                new_item.parent = header_item
-
+                # Add task nested under the area header
+                new_item = note.add(st['task'], False)
+                new_item.parent = header
+    
     keep.sync()
-    print("Google Keep synchronization successful.")
+    print(f"Successfully synced {len(tasks_to_push)} tasks to Google Keep.")
 
 if __name__ == "__main__":
     main()
