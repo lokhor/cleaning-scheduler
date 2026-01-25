@@ -9,6 +9,8 @@ jobs:
   run-sync:
     # Ensure this matches the label of your self-hosted runner
     runs-on: self-hosted 
+    permissions:
+      contents: write
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
