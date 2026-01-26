@@ -15,16 +15,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
       - name: Install Dependencies
-        run: pip install pandas
+        run: py -m pip install pandas
 
       - name: Run Reset Script
-        run: python reset_csv.py
+        run: py reset_csv.py
 
       - name: Commit and Push Reset
         run: |
