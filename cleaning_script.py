@@ -26,7 +26,6 @@ def is_due(row, today):
     last_assigned = get_date_from_str(row['Last Assigned Date'])
     freq = str(row['frequency']).lower().strip()
     
-    # Always do daily tasks
     if freq == 'daily': 
         return True, "Daily task"
         
@@ -101,17 +100,11 @@ def main():
     print("\n--- Checking Task Due Dates ---")
     for idx, row in df.iterrows():
         person = row['Currently Assigned To']
-        if pd.isna(person) or person == 'nan': 
-            debug_print(f"Skipping Row {idx}: No person assigned.")
-            continue
+        if pd.isna(person) or person == 'nan': continue
         
-        # Check if due
         should_run, reason = is_due(row, today)
         
-        # Logic: Run if Daily OR (It's Monday AND it's Due)
-        # If it's Thursday, Weekly tasks won't run even if 'due' logic passes, 
-        # unless you want them to run any day they are overdue?
-        # Current logic: Weekly tasks ONLY push on Mondays.
+        # Logic: Daily always goes. Others only go on Mondays if due.
         if str(row['frequency']).lower() == 'daily':
             is_go = True
         elif is_monday and should_run:
@@ -120,22 +113,16 @@ def main():
             is_go = False
 
         if is_go:
-            debug_print(f"Please Push: [{person}] {row['Activity']} ({reason})")
+            debug_print(f"Please Push: [{person}] {row['Area']} - {row['Activity']}")
             tasks_to_push.append({
                 'person': person, 
                 'area': row['Area'], 
                 'task': row['Activity'],
                 'original_index': idx
             })
-            # Update date in CSV memory
             df.at[idx, 'Last Assigned Date'] = today.isoformat()
-        else:
-            # Uncomment this if you want to see why things are NOT adding
-            # debug_print(f"Skipping: [{person}] {row['Activity']} - {reason}")
-            pass
 
     # Save CSV
-    print(f"\nSaving CSV... ({len(tasks_to_push)} tasks marked for sync)")
     df.to_csv('temp.csv', index=False)
     with open(CSV_FILE, 'w', newline='') as f:
         f.writelines(top_lines)
@@ -143,7 +130,6 @@ def main():
     os.remove('temp.csv')
 
     # Authenticate
-    print("\n--- Authenticating with Google Keep ---")
     username = os.getenv('GOOGLE_USERNAME')
     password = os.getenv('GOOGLE_PASSWORD') 
     keep = gkeepapi.Keep()
@@ -161,49 +147,32 @@ def main():
     for person, tasks in groupby(tasks_to_push, key=lambda x: x['person']):
         env_key = f"NOTE_{person.upper().replace(' ', '_')}"
         note_title = os.getenv(env_key)
+        if not note_title: continue
         
         print(f"\nProcessing Person: {person}")
-        print(f"Looking for Note Title: '{note_title}' (Key: {env_key})")
-        
-        if not note_title: 
-            print("SKIPPING: No note title found in Secrets.")
-            continue
-        
         notes = list(keep.find(query=note_title))
-        if not notes:
-            print(f"Note '{note_title}' not found. Creating new note.")
-            note = keep.createList(note_title, [])
-        else:
-            note = notes[0]
-            print(f"Found existing note: {note.title} (ID: {note.id})")
+        note = notes[0] if notes else keep.createList(note_title, [])
 
-        # Clear existing items
-        print("  - Clearing old items...")
-        old_count = len(note.items)
+        # 1. CLEAR and Intermediate Sync (Crucial for correct nesting)
         for item in list(note.items):
             item.delete()
-        print(f"  - Deleted {old_count} items.")
+        keep.sync() 
+
+        # 2. Sort tasks by Area then by Original Index
+        p_tasks = sorted(list(tasks), key=lambda x: (x['area'], x['original_index']))
         
-        # Sort and Add
-        p_tasks = sorted(list(tasks), key=lambda x: x['original_index'])
-        
-        print(f"  - Adding {len(p_tasks)} new tasks...")
+        # 3. Add to Keep with Header Grouping
         for area, subtasks in groupby(p_tasks, key=lambda x: x['area']):
-            # Add Header
             header = note.add(f"--- {area} ---", False)
-            # print(f"    + Header: {area}") # Uncomment for super verbose
-            
             for st in subtasks:
                 new_item = note.add(st['task'], False)
-                new_item.parent = header
-                # print(f"      - Task: {st['task']}") # Uncomment for super verbose
-
-    print("\n--- Uploading changes to Google ---")
-    try:
+                new_item.parent = header # Indent under Area
+        
+        # Sync per person to ensure structural integrity
         keep.sync()
-        print("Sync completed successfully.")
-    except Exception as e:
-        print(f"SYNC FAILED: {e}")
+        print(f"Sync for {person} completed.")
+
+    print("\n--- Final Sync Finished ---")
 
 if __name__ == "__main__":
     main()
