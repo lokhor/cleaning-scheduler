@@ -1,8 +1,8 @@
 Cleaning Schedule,,,,,,,
 ,,,,,,,
 Area,Activity,Desc,frequency,Who can do this,Last Assigned Date,Currently Assigned To,Effort to complete in minutes
-Kitchen,Wipe Sink Out,,Daily,"Nick, Laurelle",2026-01-26,Laurelle,10
-Kitchen,Wipe Down and Dry Benchtop,,Daily,"Nick, Laurelle",2026-01-26,Laurelle,10
+Kitchen,Wipe Sink Out,,Daily,"Nick, Laurelle",2026-01-26,Nick,10
+Kitchen,Wipe Down and Dry Benchtop,,Daily,"Nick, Laurelle",2026-01-26,Nick,10
 Coffee station ,Wipe Bench,,Daily,"Nick, Laurelle",2026-01-26,Nick,5
 Coffee station ,"
 Fill water",,Daily,"Nick, Laurelle",2026-01-26,Nick,5
@@ -16,29 +16,29 @@ behind machine
 ",,Weekly,"Nick, Laurelle",2026-01-26,Nick,5
 Coffee station ,pull out water tank,,Weekly,"Nick, Laurelle",2026-01-26,Nick,5
 Coffee station ,Descale,,Monthly,"Nick, Laurelle",2026-01-26,Nick,20
-Kitchen,Wipe Outside of Fridge,,Weekly,"Nick, Laurelle",2026-01-26,Laurelle,5
-Kitchen,Clean Inside Fridge,,Monthly,"Nick, Laurelle",2026-01-26,Laurelle,20
-Kitchen,Wipe Cupboards Down,,Weekly,"Nick, Laurelle",2026-01-26,Laurelle,15
-Kitchen,Wine Rack,,Monthly,"Nick, Laurelle",2026-01-26,Laurelle,10
-Kitchen,Clean Rangehood and Filters,Wipe surface and take filters out and clean them,Monthly,"Nick, Laurelle",2026-01-26,Laurelle,15
-Kitchen,Clean Stovetop,,Daily,"Nick, Laurelle",2026-01-26,Laurelle,10
-Garage,Tidy Shoes,,Daily,"Nick, Laurelle",2026-01-26,Nick,5
-Car,Tidy inside car,,Weekly,"Nick, Laurelle",2026-01-26,Nick,15
-Car,Wash car,,Fortnightly,"Nick, Laurelle",2026-01-26,Nick,60
+Kitchen,Wipe Outside of Fridge,,Weekly,"Nick, Laurelle",2026-01-26,Nick,5
+Kitchen,Clean Inside Fridge,,Monthly,"Nick, Laurelle",2026-01-26,Nick,20
+Kitchen,Wipe Cupboards Down,,Weekly,"Nick, Laurelle",2026-01-26,Nick,15
+Kitchen,Wine Rack,,Monthly,"Nick, Laurelle",2026-01-26,Nick,10
+Kitchen,Clean Rangehood and Filters,Wipe surface and take filters out and clean them,Monthly,"Nick, Laurelle",2026-01-26,Nick,15
+Kitchen,Clean Stovetop,,Daily,"Nick, Laurelle",2026-01-26,Nick,10
+Garage,Tidy Shoes,,Daily,"Nick, Laurelle",2026-01-26,Laurelle,5
+Car,Tidy inside car,,Weekly,"Nick, Laurelle",2026-01-26,Laurelle,15
+Car,Wash car,,Fortnightly,"Nick, Laurelle",2026-01-26,Laurelle,60
 General Household Items,Air Conditioning Filter,,Monthly,Nick,2026-01-26,Laurelle,15
 General Household Items,Ceiling Fans,Wipe all fans down with detergent and wet then dry cloth,Monthly,Nick,2026-01-26,Laurelle,20
 General Household Items,Air Purifier Filter,,Fortnightly,Laurelle,2026-01-26,Laurelle,10
-Downstairs Bathroom,Clean Toilet,,Weekly,"Nick, Laurelle",2026-01-26,Nick,10
-Downstairs Bathroom,Clean Shower,,Weekly,"Nick, Laurelle",2026-01-26,Nick,10
-Downstairs Bathroom,Clean Vanity,,Weekly,"Nick, Laurelle",2026-01-26,Nick,10
-Downstairs Bathroom,Clean Mirror,,Weekly,"Nick, Laurelle",2026-01-26,Nick,5
-Downstairs Bathroom,Mop Floor,,Weekly,"Nick, Laurelle",2026-01-26,Nick,15
-Main Bathroom,Clean Toilet,,Weekly,"Nick, Laurelle",2026-01-26,Nick,10
-Main Bathroom,Clean Shower,,Weekly,"Nick, Laurelle",2026-01-26,Nick,15
-Main Bathroom,Clean Vanity,,Weekly,"Nick, Laurelle",2026-01-26,Nick,5
-Main Bathroom,Clean Mirror,,Weekly,"Nick, Laurelle",2026-01-26,Nick,5
-Main Bathroom,Mop Floor,,Weekly,"Nick, Laurelle",2026-01-26,Nick,10
-Main Bathroom,Clean Bath,,Weekly,"Nick, Laurelle",2026-01-26,Nick,10
+Downstairs Bathroom,Clean Toilet,,Weekly,"Nick, Laurelle",2026-01-26,Laurelle,10
+Downstairs Bathroom,Clean Shower,,Weekly,"Nick, Laurelle",2026-01-26,Laurelle,10
+Downstairs Bathroom,Clean Vanity,,Weekly,"Nick, Laurelle",2026-01-26,Laurelle,10
+Downstairs Bathroom,Clean Mirror,,Weekly,"Nick, Laurelle",2026-01-26,Laurelle,5
+Downstairs Bathroom,Mop Floor,,Weekly,"Nick, Laurelle",2026-01-26,Laurelle,15
+Main Bathroom,Clean Toilet,,Weekly,"Nick, Laurelle",2026-01-26,Laurelle,10
+Main Bathroom,Clean Shower,,Weekly,"Nick, Laurelle",2026-01-26,Laurelle,15
+Main Bathroom,Clean Vanity,,Weekly,"Nick, Laurelle",2026-01-26,Laurelle,5
+Main Bathroom,Clean Mirror,,Weekly,"Nick, Laurelle",2026-01-26,Laurelle,5
+Main Bathroom,Mop Floor,,Weekly,"Nick, Laurelle",2026-01-26,Laurelle,10
+Main Bathroom,Clean Bath,,Weekly,"Nick, Laurelle",2026-01-26,Laurelle,10
 Ensuite Bathroom,Clean Toilet,,Weekly,"Nick, Laurelle",2026-01-26,Laurelle,10
 Ensuite Bathroom,Clean Shower,,Weekly,"Nick, Laurelle",2026-01-26,Laurelle,10
 Ensuite Bathroom,Clean Vanity - Nick,,Weekly,"Nick, Laurelle",2026-01-26,Laurelle,5
