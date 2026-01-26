@@ -66,9 +66,23 @@ def main():
     try:
         with open(CSV_FILE, 'r', encoding='utf-8') as f:
             top_lines = [next(f) for _ in range(2)]
-        df = pd.read_csv(CSV_FILE, skiprows=2)
+        
+        # Explicitly set dtypes to prevent pandas from guessing 'float64'
+        df = pd.read_csv(CSV_FILE, skiprows=2, dtype={
+            'Currently Assigned To': str,
+            'Last Assigned Date': str,
+            'Area': str,
+            'Activity': str
+        })
+        
+        # Clean up any NaN values immediately so they are treatable as strings
+        df['Last Assigned Date'] = df['Last Assigned Date'].fillna('')
+        df['Currently Assigned To'] = df['Currently Assigned To'].fillna('')
+        
+        print(f"Loaded CSV with {len(df)} rows.")
     except Exception as e:
-        print(f"Error: {e}"); return
+        print(f"CRITICAL ERROR reading CSV: {e}")
+        return
 
     # Sort CSV by Area
     df = df.sort_values(by=['Area', 'Activity']).reset_index(drop=True)
