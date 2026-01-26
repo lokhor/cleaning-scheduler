@@ -188,4 +188,22 @@ def main():
         p_tasks = sorted(list(tasks), key=lambda x: x['original_index'])
         
         print(f"  - Adding {len(p_tasks)} new tasks...")
-        for area
+        for area, subtasks in groupby(p_tasks, key=lambda x: x['area']):
+            # Add Header
+            header = note.add(f"--- {area} ---", False)
+            # print(f"    + Header: {area}") # Uncomment for super verbose
+            
+            for st in subtasks:
+                new_item = note.add(st['task'], False)
+                new_item.parent = header
+                # print(f"      - Task: {st['task']}") # Uncomment for super verbose
+
+    print("\n--- Uploading changes to Google ---")
+    try:
+        keep.sync()
+        print("Sync completed successfully.")
+    except Exception as e:
+        print(f"SYNC FAILED: {e}")
+
+if __name__ == "__main__":
+    main()
