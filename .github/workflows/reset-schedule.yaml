@@ -1,0 +1,35 @@
+name: Reset Cleaning Schedule Dates
+
+on:
+  workflow_dispatch: # This allows you to click a button to run it manually
+
+jobs:
+  reset-csv:
+    runs-on: self-hosted
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Dependencies
+        run: pip install pandas
+
+      - name: Run Reset Script
+        run: python reset_csv.py
+
+      - name: Commit and Push Reset
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add "cleaning schedule.csv"
+          git commit -m "Manual reset of task dates [skip ci]" || exit 0
+          git push
