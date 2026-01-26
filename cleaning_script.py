@@ -100,10 +100,13 @@ def main():
     username = os.getenv('GOOGLE_USERNAME')
     password = os.getenv('GOOGLE_PASSWORD') 
     keep = gkeepapi.Keep()
+    
+    # FIX 1: Use authenticate instead of resume
     try:
-        keep.resume(username, password)
-    except:
         keep.authenticate(username, password)
+    except Exception as e:
+        print(f"Authentication failed: {e}")
+        return
 
     tasks_to_push.sort(key=lambda x: x['person'])
     for person, tasks in groupby(tasks_to_push, key=lambda x: x['person']):
@@ -114,19 +117,17 @@ def main():
         notes = list(keep.find(query=note_title))
         note = notes[0] if notes else keep.createList(note_title, [])
         
-        # 1. ARCHIVE: Move checked items to archive, then remove from active view
-        for item in note.items:
+        # FIX 2: ListItems don't have an 'archived' attribute. 
+        # We delete checked items to keep the list clean.
+        for item in list(note.items):
             if item.checked:
-                item.archived = True
+                item.delete()
+            # Delete remaining unchecked items to ensure a fresh rebuild in the correct CSV order
+            else:
+                item.delete()
         
-        # 2. SYNC: Map existing items by text to avoid redundant deletes
-        existing_items = {item.text: item for item in note.items if not item.archived}
         p_tasks = sorted(list(tasks), key=lambda x: x['original_index'])
         
-        # 3. REBUILD: Clear and re-add in order (using a stable list)
-        for item in list(note.items):
-            item.delete()
-
         for area, subtasks in groupby(p_tasks, key=lambda x: x['area']):
             header = note.add(f"--- {area} ---", False)
             for st in subtasks:
