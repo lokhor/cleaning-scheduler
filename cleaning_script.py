@@ -67,22 +67,16 @@ def main():
         with open(CSV_FILE, 'r', encoding='utf-8') as f:
             top_lines = [next(f) for _ in range(2)]
         
-        # Explicitly set dtypes to prevent pandas from guessing 'float64'
+        # Fixed dtypes to prevent float64 errors
         df = pd.read_csv(CSV_FILE, skiprows=2, dtype={
             'Currently Assigned To': str,
-            'Last Assigned Date': str,
-            'Area': str,
-            'Activity': str
+            'Last Assigned Date': str
         })
-        
-        # Clean up any NaN values immediately so they are treatable as strings
         df['Last Assigned Date'] = df['Last Assigned Date'].fillna('')
         df['Currently Assigned To'] = df['Currently Assigned To'].fillna('')
         
-        print(f"Loaded CSV with {len(df)} rows.")
     except Exception as e:
-        print(f"CRITICAL ERROR reading CSV: {e}")
-        return
+        print(f"Error: {e}"); return
 
     # Sort CSV by Area
     df = df.sort_values(by=['Area', 'Activity']).reset_index(drop=True)
@@ -93,7 +87,7 @@ def main():
     tasks_to_push = []
     for idx, row in df.iterrows():
         person = row['Currently Assigned To']
-        if pd.isna(person) or person == 'nan': continue
+        if not person: continue
         due, _ = is_due(row, today)
         if str(row['frequency']).lower() == 'daily' or (is_monday and due):
             tasks_to_push.append({'person': person, 'area': row['Area'], 'task': row['Activity']})
@@ -115,7 +109,7 @@ def main():
         note_title = os.getenv(f"NOTE_{person.upper().replace(' ', '_')}")
         if not note_title: continue
         
-        print(f"Syncing list for {person}...")
+        print(f"Syncing indented list for {person}...")
         notes = list(keep.find(query=note_title))
         note = notes[0] if notes else keep.createList(note_title, [])
 
@@ -123,28 +117,28 @@ def main():
         for item in list(note.items): item.delete()
         keep.sync() 
 
-        # 2. Pass One: Create Headers Only
+        # 2. Build the list using explicit hierarchy
         p_tasks = list(tasks)
-        header_map = {}
-        distinct_areas = sorted(list(set(t['area'] for t in p_tasks)))
-        
-        for area in distinct_areas:
-            h_text = f"--- {area.upper()} ---"
-            header_map[area] = note.add(h_text, False)
-        
-        # Intermediate sync to bake headers into Keep's DB
-        keep.sync() 
+        # Ensure tasks for this person are sorted by Area
+        p_tasks.sort(key=lambda x: x['area'])
 
-        # 3. Pass Two: Attach Tasks to Headers
-        for st in p_tasks:
-            clean_text = str(st['task']).replace('\n', ' ').strip()
-            item = note.add(clean_text, False)
-            # Explicit parenting + Indent command
-            item.parent = header_map[st['area']]
-            item.indent() 
+        for area, subtasks in groupby(p_tasks, key=lambda x: x['area']):
+            # Create Header
+            header = note.add(f"--- {area.upper()} ---", False)
+            
+            for st in subtasks:
+                clean_text = str(st['task']).replace('\n', ' ').strip()
+                item = note.add(clean_text, False)
+                
+                # IMPORTANT: Set parent AND use the corrected indent call
+                item.parent = header
+                # indent() requires the node itself as the first argument in gkeepapi
+                note.indent(item) 
 
+        # Final sync for this person
         keep.sync()
-    print("Done!")
+
+    print("--- Done! ---")
 
 if __name__ == "__main__":
     main()
