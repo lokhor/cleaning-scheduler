@@ -67,7 +67,6 @@ def main():
         with open(CSV_FILE, 'r', encoding='utf-8') as f:
             top_lines = [next(f) for _ in range(2)]
         
-        # Fixed dtypes to prevent float64 errors
         df = pd.read_csv(CSV_FILE, skiprows=2, dtype={
             'Currently Assigned To': str,
             'Last Assigned Date': str
@@ -113,13 +112,12 @@ def main():
         notes = list(keep.find(query=note_title))
         note = notes[0] if notes else keep.createList(note_title, [])
 
-        # 1. Clear and Sync (Fresh start)
+        # 1. Clear and Sync
         for item in list(note.items): item.delete()
         keep.sync() 
 
-        # 2. Build the list using explicit hierarchy
+        # 2. Build Hierarchy
         p_tasks = list(tasks)
-        # Ensure tasks for this person are sorted by Area
         p_tasks.sort(key=lambda x: x['area'])
 
         for area, subtasks in groupby(p_tasks, key=lambda x: x['area']):
@@ -130,12 +128,11 @@ def main():
                 clean_text = str(st['task']).replace('\n', ' ').strip()
                 item = note.add(clean_text, False)
                 
-                # IMPORTANT: Set parent AND use the corrected indent call
+                # Logic to force indentation
                 item.parent = header
-                # indent() requires the node itself as the first argument in gkeepapi
-                note.indent(item) 
+                # This is the specific method to trigger the 'indented' UI state
+                item.indent()
 
-        # Final sync for this person
         keep.sync()
 
     print("--- Done! ---")
