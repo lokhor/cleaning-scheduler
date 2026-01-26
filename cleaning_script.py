@@ -86,7 +86,7 @@ def main():
     tasks_to_push = []
     for idx, row in df.iterrows():
         person = row['Currently Assigned To']
-        if not person: continue
+        if not person or person == '': continue
         due, _ = is_due(row, today)
         if str(row['frequency']).lower() == 'daily' or (is_monday and due):
             tasks_to_push.append({'person': person, 'area': row['Area'], 'task': row['Activity']})
@@ -130,8 +130,8 @@ def main():
                 
                 # Logic to force indentation
                 item.parent = header
-                # This is the specific method to trigger the 'indented' UI state
-                item.indent()
+                # Correct indentation call for gkeepapi: pass the node into itself
+                item.indent(item)
 
         keep.sync()
 
